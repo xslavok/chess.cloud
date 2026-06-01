@@ -1,0 +1,36 @@
+{
+  "name": "sahovski-kalkulator",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^4.3.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.14"
+  },
+  "dependencies": {
+    "@prisma/client": "^7.8.0",
+    "@supabase/supabase-js": "^2.106.2",
+    "@tailwindcss/postcss": "^4.3.0",
+    "chess.js": "^1.4.0",
+    "react": "^19.2.6",
+    "react-chessboard": "^5.10.0",
+    "react-dom": "^19.2.6",
+    "recharts": "^3.8.1"
+  }
+}
