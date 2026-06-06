@@ -5,8 +5,8 @@ import { Chess } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
 import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
-const API_URL = getApiUrl();
-
+const API_URL = "http://13.140.140.117:3000";
+// na primer: const API_URL = "http://144.12.34.56:3000";
 const moveSound = new Audio('https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-self.mp3');
 moveSound.volume = 0.5;
 
@@ -56,7 +56,8 @@ const prevodi = {
     totalTourn: 'UKUPNO (TURNIR):', deleteConfirm: 'Da li ste sigurni da želite trajno da obrišete ovaj zapis iz baze?', deleteErr: 'Greška pri brisanju zapisa.',
     myProfile: 'MOJ PROFIL', currentElo: 'TRENUTNI ELO REJTING', title: 'TITULA', noTitle: 'BEZ TITULE',
     basicInfo: 'OSNOVNI PODACI:', nameLabel: 'IME:', emailLabel: 'EMAIL:', totalGamesLabel: 'UKUPNO PARTIJA:',
-    deleteAccMsg: 'Da li želite da obrišete nalog i svu istoriju partija?', deleteAccBtn: 'Obriši Nalog', guest: 'GOST'
+    deleteAccMsg: 'Da li želite da obrišete nalog i svu istoriju partija?', deleteAccBtn: 'Obriši Nalog', guest: 'GOST',
+    dbSearch: 'ŠAHOVSKA BAZA', dbDesc: 'Pretraži 10 miliona partija', searchBtn: 'TRAŽI IGRAČA', noPlayer: 'Igrač nije pronađen.', total: 'UKUPNO', wins: 'POBEDE', losses: 'PORAZI', draws: 'REMIJI'
   },
   EN: {
     loading: 'INITIALIZATION...', ready: 'SYSTEMS READY.',
@@ -96,7 +97,8 @@ const prevodi = {
     totalTourn: 'TOTAL (TOURNAMENT):', deleteConfirm: 'Are you sure you want to permanently delete this record from the database?', deleteErr: 'Error deleting record.',
     myProfile: 'MY PROFILE', currentElo: 'CURRENT ELO RATING', title: 'TITLE', noTitle: 'NO TITLE',
     basicInfo: 'BASIC INFO:', nameLabel: 'NAME:', emailLabel: 'EMAIL:', totalGamesLabel: 'TOTAL GAMES:',
-    deleteAccMsg: 'Do you want to delete your account and all game history?', deleteAccBtn: 'Delete Account', guest: 'GUEST'
+    deleteAccMsg: 'Do you want to delete your account and all game history?', deleteAccBtn: 'Delete Account', guest: 'GUEST',
+    dbSearch: 'CHESS DATABASE', dbDesc: 'Search 10 million games', searchBtn: 'SEARCH PLAYER', noPlayer: 'Player not found.', total: 'TOTAL', wins: 'WINS', losses: 'LOSSES', draws: 'DRAWS'
   }
 };
 
@@ -105,7 +107,7 @@ export default function App() {
   const t = prevodi[lang];
   const [isLoading, setIsLoading] = useState(true);
   
-  const [pogled, setPogled] = useState<'HOME' | 'KALK' | 'TITULE' | 'TABLA' | 'ISTORIJA' | 'PROFIL'>('HOME');
+  const [pogled, setPogled] = useState<'HOME' | 'KALK' | 'TITULE' | 'TABLA' | 'ISTORIJA' | 'PROFIL' | 'BAZA'>('HOME');
   
   const [user, setUser] = useState<any>(() => {
     const sacuvanKorisnik = localStorage.getItem('chessUser');
@@ -156,6 +158,11 @@ export default function App() {
   const [isAnalyzingGame, setIsAnalyzingGame] = useState(false);
   const [analyzeProgress, setAnalyzeProgress] = useState(0);
   const [gameReport, setGameReport] = useState<any>(null);
+
+  // NOVO: Stanja za BAZU
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dbProfile, setDbProfile] = useState<any>(null);
+  const [isSearchingDb, setIsSearchingDb] = useState(false);
 
   useEffect(() => { localStorage.setItem('chessBoardPosition', pozicija); }, [pozicija]);
 
@@ -311,6 +318,25 @@ export default function App() {
     } catch (err) { setAuthError(t.authErr); }
   };
 
+  // NOVO: Funkcija za pretragu baze
+  const pretraziBazu = async () => {
+    if (!searchQuery) return;
+    setIsSearchingDb(true);
+    setDbProfile(null);
+    try {
+      const res = await fetch(`${API_URL}/api/chess/profile/${encodeURIComponent(searchQuery)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setDbProfile(data);
+      } else {
+        alert(t.noPlayer);
+      }
+    } catch (err) {
+      alert("Greška pri konekciji sa serverom.");
+    }
+    setIsSearchingDb(false);
+  };
+
   const povuciPotez = (args: any) => {
     try {
       const source = args.sourceSquare;
@@ -432,7 +458,7 @@ export default function App() {
     return { ukupnoPobeda: pobede, ukupnoRemija: remiji, ukupnoPoraza: porazi, chartData: data };
   }, [user, istorija]);
 
-  // Ugasen TS error za unsupported prop
+  // @ts-ignore
   const customSquareStyles = lastMoveCoords ? {
     [lastMoveCoords.from]: { backgroundColor: 'rgba(255, 255, 0, 0.3)' },
     [lastMoveCoords.to]: { backgroundColor: 'rgba(255, 255, 0, 0.4)' }
@@ -548,6 +574,17 @@ export default function App() {
               <h2 className="text-base sm:text-lg md:text-xl font-bold tracking-widest uppercase mb-1 text-white">{t.histTool}</h2>
               <p className="text-[9px] sm:text-[10px] md:text-xs font-mono uppercase tracking-widest text-zinc-400">{!user ? `🔒 ${t.locked}` : t.histDesc}</p>
             </button>
+
+            {/* DUGME 5: BAZA PARTIJA */}
+            <button onClick={() => setPogled('BAZA')} className="group relative flex flex-col items-center justify-center border border-zinc-800 bg-zinc-950 p-6 hover:border-blue-500 transition-all transform hover:scale-[1.02] shadow-[0_0_20px_rgba(255,255,255,0.02)] hover:shadow-[0_0_30px_rgba(59,130,246,0.1)] h-40 md:col-span-2">
+              <svg className="w-12 h-12 mb-4 text-zinc-600 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="1.5" d="M4 7v10c0 2 1.5 3 4 3h8c2.5 0 4-1 4-3V7c0-2-1.5-3-4-3H8C5.5 4 4 5 4 7z" />
+                <path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="1.5" d="M4 11h16M12 4v16" />
+              </svg>
+              <h2 className="text-base sm:text-lg md:text-xl font-bold tracking-widest uppercase mb-1 text-white group-hover:text-blue-500">{t.dbSearch}</h2>
+              <p className="text-[9px] sm:text-[10px] md:text-xs font-mono uppercase tracking-widest text-zinc-400">{t.dbDesc}</p>
+            </button>
+
           </div>
         </div>
       )}
@@ -558,7 +595,7 @@ export default function App() {
           <div className="border-b border-zinc-900 p-3 sm:p-4 shrink-0 flex justify-between items-center bg-black/50">
             <button onClick={() => setPogled('HOME')} className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 hover:text-white transition-colors">{t.back}</button>
             <span className="text-[9px] sm:text-[10px] font-bold tracking-widest uppercase text-zinc-300">
-              {pogled === 'KALK' ? t.eloCalc : pogled === 'TITULE' ? t.titleCalc : pogled === 'TABLA' ? t.boardTool : pogled === 'PROFIL' ? t.myProfile : t.histTool}
+              {pogled === 'KALK' ? t.eloCalc : pogled === 'TITULE' ? t.titleCalc : pogled === 'TABLA' ? t.boardTool : pogled === 'PROFIL' ? t.myProfile : pogled === 'BAZA' ? t.dbSearch : t.histTool}
             </span>
           </div>
           <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar flex-1 pb-10 min-h-0">
@@ -632,7 +669,7 @@ export default function App() {
                      </div>
                   )}
                   <div className="flex-1 aspect-square border border-zinc-800 relative">
-                    {/* @ts-ignore - Ućutkujemo VS Code grešku za customSquareStyles jer tvoja lokalna verzija TS fajla ima bug */}
+                    {/* @ts-ignore */}
                     <Chessboard options={{ position: pozicija, onPieceDrop: povuciPotez, boardOrientation: orijentacija }} customSquareStyles={customSquareStyles} />
                   </div>
                 </div>
@@ -884,6 +921,70 @@ export default function App() {
                    <p className="text-[9px] text-zinc-500 font-mono mb-3">{t.deleteAccMsg}</p>
                    <button onClick={() => alert("Brisanje naloga uskoro dostupno!")} className="text-[10px] uppercase font-bold tracking-widest text-red-500 hover:text-white border border-red-900 hover:bg-red-900 px-4 py-2 transition-colors">{t.deleteAccBtn}</button>
                 </div>
+              </div>
+            )}
+
+            {/* EKRAN: PRETRAGA BAZE */}
+            {pogled === 'BAZA' && (
+              <div className="space-y-6 sm:space-y-8 animate-[fadeIn_0.3s_ease-out]">
+                <div className="flex gap-2">
+                  <input type="text" placeholder="Npr. Carlsen, Magnus" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && pretraziBazu()} className="w-full bg-black border border-zinc-800 p-3 text-white text-xs font-mono focus:outline-none focus:border-blue-500 transition-colors" />
+                  <button onClick={pretraziBazu} disabled={isSearchingDb} className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 text-[10px] tracking-widest uppercase disabled:opacity-50 transition-colors">
+                    {isSearchingDb ? '...' : t.searchBtn}
+                  </button>
+                </div>
+
+                {dbProfile && (
+                  <div className="animate-[fadeIn_0.5s_ease-out]">
+                    <div className="bg-black border border-zinc-800 p-6 text-center mb-6 shadow-[inset_0_0_30px_rgba(59,130,246,0.05)]">
+                      <div className="text-xl sm:text-2xl mb-1 font-bold text-white uppercase tracking-widest">{dbProfile.player}</div>
+                      <div className="text-[10px] text-zinc-500 font-mono tracking-widest mb-6 border-b border-zinc-900 pb-4">{t.total}: {dbProfile.stats.totalGames}</div>
+                      
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="bg-zinc-900/50 border border-green-900/30 p-2 sm:p-3"><div className="text-green-500 text-lg sm:text-xl font-light">{dbProfile.stats.wins}</div><div className="text-[8px] text-zinc-500 font-mono tracking-widest mt-1 uppercase">{t.wins}</div></div>
+                        <div className="bg-zinc-900/50 border border-zinc-800/50 p-2 sm:p-3"><div className="text-zinc-400 text-lg sm:text-xl font-light">{dbProfile.stats.draws}</div><div className="text-[8px] text-zinc-500 font-mono tracking-widest mt-1 uppercase">{t.draws}</div></div>
+                        <div className="bg-zinc-900/50 border border-red-900/30 p-2 sm:p-3"><div className="text-red-500 text-lg sm:text-xl font-light">{dbProfile.stats.losses}</div><div className="text-[8px] text-zinc-500 font-mono tracking-widest mt-1 uppercase">{t.losses}</div></div>
+                      </div>
+                    </div>
+
+                    <div className="text-[10px] text-zinc-500 font-mono tracking-widest uppercase mb-2">POSLEDNJE PARTIJE:</div>
+<div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-2">
+  {dbProfile.recentGames.map((game: any) => (
+    <div key={game.id} className="border border-zinc-800 bg-black p-3 hover:border-blue-500/50 transition-colors group">
+      <div className="flex justify-between items-center text-[9px] sm:text-[10px] font-mono mb-2 border-b border-zinc-900 pb-2">
+        <div className="flex gap-3 text-zinc-500">
+          <span>{game.date || 'Nepoznat datum'}</span>
+          <span>ECO: {game.eco || '?'}</span>
+        </div>
+        
+        {/* DUGME ZA PRIKAZ NA TABLI */}
+        <button 
+          onClick={() => {
+            if (game.moves) {
+              prikaziPartijuIzIstorije(game.moves);
+            } else {
+              alert("Ova partija nema zabeležene poteze u bazi.");
+            }
+          }}
+          className="opacity-0 group-hover:opacity-100 bg-blue-600 hover:bg-blue-500 text-white font-bold px-3 py-1 rounded-none text-[8px] tracking-widest uppercase transition-all"
+        >
+          {t.viewGame}
+        </button>
+      </div>
+      <div className="flex justify-between items-center text-xs">
+        <div className="flex flex-col gap-1 w-2/3">
+          <span className={game.white === dbProfile.player ? "text-white font-bold" : "text-zinc-400"}>⬜ {game.white}</span>
+          <span className={game.black === dbProfile.player ? "text-white font-bold" : "text-zinc-400"}>⬛ {game.black}</span>
+        </div>
+        <div className={`text-sm font-bold ${game.result === '1-0' && game.white === dbProfile.player ? 'text-green-500' : game.result === '0-1' && game.black === dbProfile.player ? 'text-green-500' : game.result === '1/2-1/2' ? 'text-zinc-500' : 'text-red-500'}`}>
+          {game.result}
+        </div>
+      </div>
+    </div>
+  ))}
+</div>
+                  </div>
+                )}
               </div>
             )}
 
